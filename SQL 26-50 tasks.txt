@@ -1,0 +1,377 @@
+Задание: 26
+Найдите среднюю цену ПК и ПК-блокнотов, выпущенных производителем A (латинская буква). Вывести: одна общая средняя цена.
+
+SELECT sum(s.price)/sum(s.kol) as AVG_price FROM
+(SELECT price,1 as kol FROM pc,product
+ WHERE pc.model=product.model AND product.maker='A'
+UNION all
+ SELECT price,1 as kol FROM laptop,product
+ WHERE laptop.model=product.model AND product.maker='A') as s
+
+or
+
+SELECT t1.c/t1.d FROM( SELECT SUM(t.a) as c, SUM(t.b) as d FROM(  
+SELECT SUM(pc.price) as a, COUNT(pc.code) as b FROM pc 
+INNER JOIN product ON pc.model=product.model WHERE product.maker='A'  
+UNION 
+SELECT SUM(laptop.price) as a, COUNT(laptop.code) as b FROM laptop 
+INNER JOIN product ON laptop.model=product.model WHERE product.maker='A') as t) as t1
+**************************************************************************************************************
+Задание: 27
+Найдите средний размер диска ПК каждого из тех производителей, которые выпускают и принтеры. Вывести: maker, средний размер HD.
+
+Select p.maker, avg(pc.hd)
+from Product p,pc
+where p.model=pc.model and maker in ( select maker from product 
+where type='printer')
+group by maker
+
+or
+
+select maker,avg(hd) 
+from product inner join pc on product.model=pc.model   
+where maker in(select maker  from product  where type='printer')  
+group by maker
+**************************************************************************************************************
+Задание: 28
+Используя таблицу Product, определить количество производителей, выпускающих по одной модели.
+
+Select count(maker)qty from (
+Select maker 
+from Product 
+group by maker 
+having count(model)=1
+)t1
+**************************************************************************************************************
+Краткая информация о базе данных "Фирма вторсырья":
+
+Фирма имеет несколько пунктов приема вторсырья. Каждый пункт получает деньги для их выдачи сдатчикам вторсырья. 
+Сведения о получении денег на пунктах приема записываются в таблицу:
+Income_o(point, date, inc)
+Первичным ключом является (point, date). При этом в столбец date записывается только дата (без времени), 
+т.е. прием денег (inc) на каждом пункте производится не чаще одного раза в день. 
+Сведения о выдаче денег сдатчикам вторсырья записываются в таблицу:
+Outcome_o(point, date, out)
+В этой таблице также первичный ключ (point, date) гарантирует отчетность каждого пункта о выданных деньгах (out)
+ не чаще одного раза в день.
+В случае, когда приход и расход денег может фиксироваться несколько раз в день, используется другая схема с таблицами, 
+имеющими первичный ключ code:
+Income(code, point, date, inc)
+Outcome(code, point, date, out)
+Здесь также значения столбца date не содержат времени.
+
+Задание: 29
+В предположении, что приход и расход денег на каждом пункте приема фиксируется не чаще одного раза в день 
+[т.е. первичный ключ (пункт, дата)], написать запрос с выходными данными (пункт, дата, приход, расход). 
+Использовать таблицы Income_o и Outcome_o.
+
+select t.point, t.date, SUM(t.inc), sum(t.out) 
+from( select point, date, inc, null as out 
+from Income_o  
+Union 
+select point, date, null as inc, Outcome_o.out 
+from Outcome_o) 
+as t 
+group by t.point, t.date
+**************************************************************************************************************
+Задание: 30
+В предположении, что приход и расход денег на каждом пункте приема фиксируется произвольное число раз 
+(первичным ключом в таблицах является столбец code), требуется получить таблицу, 
+в которой каждому пункту за каждую дату выполнения операций будет соответствовать одна строка.
+Вывод: point, date, суммарный расход пункта за день (out), суммарный приход пункта за день (inc). 
+Отсутствующие значения считать неопределенными (NULL).
+
+select point, date, SUM(sum_out), SUM(sum_inc) 
+from( select point, date, SUM(inc) as sum_inc, null as sum_out from Income Group by point, date  
+Union 
+select point, date, null as sum_inc, SUM(out) as sum_out from Outcome Group by point, date ) as t  
+group by point, date order by point
+**************************************************************************************************************
+Задание: 31
+Для классов кораблей, калибр орудий которых не менее 16 дюймов, укажите класс и страну
+
+Select class, country
+from classes
+where bore>=16
+**************************************************************************************************************
+Задание: 32
+Одной из характеристик корабля является половина куба калибра его главных орудий (mw). 
+С точностью до 2 десятичных знаков определите среднее значение mw для кораблей каждой страны, у которой есть корабли в базе данных.
+
+Select country, cast(avg((power(bore,3)/2)) as numeric(6,2)) as weight
+from (select country, classes.class, bore, name from classes left join ships on classes.class=ships.class
+union all
+select distinct country, class, bore, ship from classes t1 left join outcomes t2 on t1.class=t2.ship
+where ship=class and ship not in (select name from ships) ) a
+where name IS NOT NULL group by country
+**************************************************************************************************************
+Задание: 33
+Укажите корабли, потопленные в сражениях в Северной Атлантике (North Atlantic). Вывод: ship.
+
+Select ship
+from outcomes
+where result='sunk' and battle='North Atlantic'
+
+or
+
+SELECT o.ship FROM
+BATTLES b
+LEFT join outcomes o ON o.battle = b.name
+WHERE b.name = 'North Atlantic' AND o.result = 'sunk'
+**************************************************************************************************************
+Задание: 34
+По Вашингтонскому международному договору от начала 1922 г. запрещалось строить линейные корабли водоизмещением более 35 тыс.тонн. 
+Укажите корабли, нарушившие этот договор (учитывать только корабли c известным годом спуска на воду). Вывести названия кораблей.
+
+Select name
+from classes, ships
+where classes.class=ships.class and displacement>35000 and
+launched>=1922 and type='bb'
+**************************************************************************************************************
+Задание: 35
+В таблице Product найти модели, которые состоят только из цифр или только из латинских букв (A-Z, без учета регистра).
+Вывод: номер модели, тип модели.
+
+SELECT model, type 
+FROM product 
+WHERE model NOT LIKE '%[^0-9]%' OR model NOT LIKE '%[^a-z]%'
+
+or
+
+SELECT model, type
+FROM product
+WHERE upper(model) NOT like '%[^A-Z]%'
+OR model not like '%[^0-9]%'
+**************************************************************************************************************
+Задание: 36
+Перечислите названия головных кораблей, имеющихся в базе данных (учесть корабли в Outcomes).
+
+Select name 
+from ships 
+where class = name
+union
+select ship as name from classes,outcomes where classes.class = outcomes.ship
+**************************************************************************************************************
+Задание: 37
+Найдите классы, в которые входит только один корабль из базы данных (учесть также корабли в Outcomes).
+
+Select class  
+from(select name,class from ships  
+union  
+select class as name,class  from classes,outcomes  where classes.class=outcomes.ship) A   
+group by class  having count(A.name)=1
+
+or
+
+SELECT c.class
+FROM classes c
+ LEFT JOIN (
+ SELECT class, name
+ FROM ships
+ UNION
+ SELECT ship, ship
+ FROM outcomes
+) AS s ON s.class = c.class
+GROUP BY c.class
+HAVING COUNT(s.name) = 1
+**************************************************************************************************************
+Задание: 38
+Найдите страны, имевшие когда-либо классы обычных боевых кораблей ('bb') и имевшие когда-либо классы крейсеров ('bc').
+
+Select country  from classes  where type='bb'   
+intersect  
+Select country  from classes  where type='bc'
+
+or
+
+SELECT country
+FROM classes
+GROUP BY country
+HAVING COUNT(DISTINCT type) = 2
+**************************************************************************************************************
+Задание: 39
+Найдите корабли, `сохранившиеся для будущих сражений`; т.е. выведенные из строя в одной битве (damaged), 
+они участвовали в другой, произошедшей позже.
+
+WITH b_s AS
+(SELECT o.ship, b.name, b.date, o.result
+FROM outcomes o
+LEFT JOIN battles b ON o.battle = b.name )
+SELECT DISTINCT a.ship FROM b_s a
+WHERE UPPER(a.ship) IN
+(SELECT UPPER(ship) FROM b_s b
+WHERE b.date < a.date AND b.result = 'damaged')
+
+or
+
+select distinct ccc.sh from ( select aaa.ship as sh, aaa.[date] as d1, bbb.[date] as d2 from ( 
+select ship, [date] from outcomes as o inner join battles as b on o.battle=b.name where result = 'damaged') as aaa inner join (select ship,  
+[date] from outcomes as o inner join battles as b on o.battle=b.name) as bbb on aaa.ship=bbb.ship 
+where bbb.date > aaa.date) as ccc
+**************************************************************************************************************
+Задание: 40
+Найти производителей, которые выпускают более одной модели, 
+при этом все выпускаемые производителем модели являются продуктами одного типа.
+Вывести: maker, type
+
+SELECT maker, MAX(type)
+FROM product
+GROUP BY maker
+HAVING COUNT(DISTINCT type) = 1 AND COUNT(model) > 1
+
+or
+
+Select maker,type
+from Product
+where maker in ( select maker
+from ( select maker,type from Product group by maker,type ) x  
+group by maker having count(*)=1 )  
+group by maker,type having count(*)>1
+**************************************************************************************************************
+Задание: 41
+Для каждого производителя, у которого присутствуют модели хотя бы в одной из таблиц PC, Laptop или Printer,
+определить максимальную цену на его продукцию. 
+Вывод: имя производителя, если среди цен на продукцию данного производителя присутствует NULL, 
+то выводить для этого производителя NULL, 
+иначе максимальную цену.
+
+with new as (select model,price from PC
+union 
+select model,price from Laptop
+union
+select model,price from Printer)
+select t.maker, 
+case when count(price) = count(*) then max(price) end max_price
+from Product as t, new
+where t.model=new.model
+group by t.maker
+
+or 
+
+select p.maker,
+CASE WHEN MAX(CASE WHEN d.price IS NULL THEN 1 ELSE 0 END) = 0 THEN MAX(d.price)
+END
+from product p
+inner join (
+select distinct model, price from pc
+union
+select distinct model, price from laptop
+union
+select distinct model, price from printer
+) d on d.model = p.model
+group by p.maker
+having count(p.maker) > 0
+**************************************************************************************************************
+Задание: 42
+Найдите названия кораблей, потопленных в сражениях, и название сражения, в котором они были потоплены.
+
+Select ship,battle
+from outcomes
+where result='sunk'
+**************************************************************************************************************
+Задание: 43
+Укажите сражения, которые произошли в годы, не совпадающие ни с одним из годов спуска кораблей на воду.
+
+select name
+from battles
+where year(date) not in (
+select launched from ships
+where launched is not null)
+
+or
+
+select name from battles where DATEPART(yy, date) not in (select DATEPART(yy, date)  
+from battles join ships on DATEPART(yy, date)=launched) 
+**************************************************************************************************************
+Задание: 44
+Найдите названия всех кораблей в базе данных, начинающихся с буквы R.
+
+select name from Ships
+where name LIKE 'R%'
+UNION
+SELECT Ship From Outcomes
+where Ship LIKE 'R%'
+
+or
+
+Select name from ships where name like 'R%'   
+union   
+Select name from battles where name like 'R%'   
+union   
+Select ship from outcomes where ship like 'R%' 
+**************************************************************************************************************
+Задание: 45
+Найдите названия всех кораблей в базе данных, состоящие из трех и более слов (например, King George V).
+Считать, что слова в названиях разделяются единичными пробелами, и нет концевых пробелов.
+
+Select ship from Outcomes 
+where ship like '% % %'
+union
+Select name from Ships 
+where name like '% % %'
+**************************************************************************************************************
+Задание: 46
+Для каждого корабля, участвовавшего в сражении при Гвадалканале (Guadalcanal), вывести название, водоизмещение и число орудий.
+
+SELECT o.ship, displacement, numGuns 
+FROM (SELECT name AS ship, displacement, numGuns
+FROM Ships s JOIN Classes c ON c.class=s.class
+UNION
+SELECT class AS ship, displacement, numGuns
+FROM Classes) AS a
+RIGHT JOIN Outcomes o
+ON o.ship=a.ship
+WHERE battle = 'Guadalcanal'
+**************************************************************************************************************
+Задание: 47
+Определить страны, которые потеряли в сражениях все свои корабли.
+
+WITH T1 AS ( SELECT COUNT(name) as co, country FROM
+(SELECT name, country FROM Classes INNER JOIN Ships ON Ships.class = Classes.class
+UNION 
+SELECT ship, country FROM Classes INNER JOIN Outcomes ON Outcomes.ship = Classes.class) FR1
+GROUP BY country
+),
+
+T2 AS ( SELECT COUNT(name) as co, country FROM ( SELECT name, country FROM Classes INNER JOIN Ships ON Ships.class = Classes.class
+WHERE name IN (SELECT DISTINCT ship FROM Outcomes WHERE result LIKE 'sunk')
+UNION
+SELECT ship, country FROM Classes INNER JOIN Outcomes ON Outcomes.ship = Classes.class
+WHERE ship IN (SELECT DISTINCT ship FROM Outcomes WHERE result LIKE 'sunk')
+) FR2 GROUP BY country )
+
+SELECT T1.country FROM T1
+INNER JOIN T2 ON T1.co = t2.co and t1.country = t2.country
+**************************************************************************************************************
+Задание: 48
+Найдите классы кораблей, в которых хотя бы один корабль был потоплен в сражении.
+
+SELECT cl.class
+FROM Classes cl LEFT JOIN Ships s ON s.class = cl.class
+WHERE cl.class IN (SELECT ship FROM Outcomes WHERE result = 'sunk') OR
+s.name IN (SELECT ship FROM Outcomes WHERE result = 'sunk')
+GROUP BY cl.class
+
+or
+
+Select class from ships 
+where name in(select ship from outcomes where result='sunk')   
+union  
+Select ship from outcomes  
+where ship not in(Select name from ships) and ship in(Select class from classes) and result='sunk'
+**************************************************************************************************************
+Задание: 49
+Найдите названия кораблей с орудиями калибра 16 дюймов (учесть корабли из таблицы Outcomes).
+
+select name from ships 
+where class in(Select class from classes where bore=16)   
+union  
+select ship from outcomes 
+where ship in(Select class from classes where bore=16)
+**************************************************************************************************************
+Задание: 50
+Найдите сражения, в которых участвовали корабли класса Kongo из таблицы Ships.
+
+select distinct battle 
+from outcomes
+where ship in (select name from ships where class='kongo')
