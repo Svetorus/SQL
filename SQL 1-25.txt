@@ -1,0 +1,410 @@
+1. Схема БД состоит из четырех таблиц:
+Product(maker, model, type)
+PC(code, model, speed, ram, hd, cd, price)
+Laptop(code, model, speed, ram, hd, price, screen)
+Printer(code, model, color, type, price)
+Таблица Product представляет производителя (maker), номер модели (model) и тип ('PC' - ПК, 'Laptop' - ПК-блокнот или 'Printer' - 
+принтер). 
+Предполагается, что номера моделей в таблице Product уникальны для всех производителей и типов продуктов. 
+В таблице PC для каждого ПК, однозначно определяемого 
+уникальным кодом – code, указаны модель – model (внешний ключ к таблице Product), скорость - speed (процессора в мегагерцах),
+ объем памяти - ram (в мегабайтах), размер диска - hd (в гигабайтах), скорость считывающего устройства - cd (например, '4x') 
+и цена - price. 
+Таблица Laptop аналогична таблице РС за исключением того, что вместо скорости CD содержит размер экрана -screen (в дюймах). 
+В таблице Printer для каждой модели принтера указывается, является ли он цветным - color ('y', если цветной), 
+тип принтера - type (лазерный – 'Laser', 
+струйный – 'Jet' или матричный – 'Matrix') и цена - price.
+*******************************************************
+Задание: 1
+Найдите номер модели, скорость и размер жесткого диска для всех ПК стоимостью менее 500 дол. Вывести: model, speed и hd
+
+select model, speed, hd
+from pc
+where price<500
+
+or
+
+SELECT Product.model,speed,hd
+FROM Product, PC
+WHERE Product.model = PC.model AND price < 500;
+*******************************************************
+Задание: 2
+Найдите производителей принтеров. Вывести: maker
+
+Select DISTINCT maker
+from Product
+WHERE type = 'Printer';
+*******************************************************
+Задание: 3
+Найдите номер модели, объем памяти и размеры экранов ПК-блокнотов, цена которых превышает 1000 дол.
+select model, ram,screen
+from laptop
+where price>1000
+
+or
+
+Select Product.model, ram, screen
+from Product,Laptop
+Where Product.model=Laptop.model and price>1000;
+*******************************************************
+Задание: 4
+Найдите все записи таблицы Printer для цветных принтеров.
+select *
+from Printer
+where color='y'
+
+or
+
+Select code, model, color, type, price
+from Printer 
+where color='y'
+*******************************************************
+Задание: 5
+Найдите номер модели, скорость и размер жесткого диска ПК, имеющих 12x или 24x CD и цену менее 600 дол.
+
+SELECT PC.model, PC.speed, PC.hd 
+FROM PC 
+WHERE (PC.cd = '12x' OR 
+PC.cd = '24x') AND 
+price < 600;
+
+SELECT model, speed, hd
+FROM PC
+WHERE price < 600 AND 
+cd BETWEEN '12x' AND '24x';
+*******************************************************
+Задание: 6
+Для каждого производителя, выпускающего ПК-блокноты c объёмом жесткого диска не менее 10 Гбайт, найти скорости таких ПК-блокнотов. 
+Вывод: производитель, скорость.
+
+SELECT DISTINCT Product.maker, Laptop.speed
+FROM Product, Laptop 
+WHERE Product.model=Laptop.model 
+and type = 'laptop' 
+and Laptop.hd >= 10
+*******************************************************
+Задание: 7
+Найдите номера моделей и цены всех имеющихся в продаже продуктов (любого типа) производителя B (латинская буква).
+
+select *from (select model,price
+ from PC
+ union
+ select model,price
+ from Laptop
+ union
+ select model,price
+ from Printer)
+as a where a.model in (select model from
+Product where maker='B')
+
+OR
+
+select distinct product.model, price 
+from product, pc
+where product.maker = 'B' and product.model = pc.model
+union
+select distinct product.model, price 
+from product, Laptop
+where product.maker = 'B' and product.model = Laptop.model
+union
+select distinct product.model, price 
+from product, Printer
+where product.maker = 'B' and product.model = Printer.model
+*******************************************************
+Задание: 8
+Найдите производителя, выпускающего ПК, но не ПК-блокноты.
+
+select distinct maker
+from product
+where type='pc' and maker not in (select maker
+from product
+where type='laptop')
+
+or
+
+select maker 
+from product 
+where type='PC' and maker not in   
+(select maker 
+ from product 
+ where type = 'Laptop')
+ group by maker
+*******************************************************
+Задание: 9
+Найдите производителей ПК с процессором не менее 450 Мгц. Вывести: Maker
+
+Select distinct maker
+from product p,pc
+where p.model=pc.model and speed>=450
+
+or
+
+Select maker  
+from pc inner join product on 
+pc.model = product.model 
+where speed >= 450 
+group by maker 
+*******************************************************
+Задание: 10
+Найдите модели принтеров, имеющих самую высокую цену. Вывести: model, price
+
+select model,price
+FROM Printer
+where price=(select MAX(price) from Printer)
+*******************************************************
+Задание: 11
+Найдите среднюю скорость ПК.
+
+Select avg(speed) avg
+from pc
+*******************************************************
+Задание: 12
+Найдите среднюю скорость ПК-блокнотов, цена которых превышает 1000 дол.
+
+Select avg(speed) as Avg_speed
+from Laptop
+where price>1000
+*******************************************************
+Задание: 13
+Найдите среднюю скорость ПК, выпущенных производителем A.
+
+select avg(speed) avg
+from product p,pc
+where p.model=pc.model and maker='A'
+
+or
+
+Select avg(speed) avg
+from pc inner join product on pc.model= product.model 
+where maker = 'A'
+*******************************************************
+Краткая информация о базе данных "Корабли":
+
+Рассматривается БД кораблей, участвовавших во второй мировой войне. Имеются следующие отношения:
+Classes (class, type, country, numGuns, bore, displacement)
+Ships (name, class, launched)
+Battles (name, date)
+Outcomes (ship, battle, result) 
+Корабли в «классах» построены по одному и тому же проекту, и классу присваивается либо имя первого корабля, 
+построенного по данному проекту, либо названию класса дается имя проекта, которое не совпадает ни с одним из кораблей в БД. 
+Корабль, давший название классу, называется головным.
+Отношение Classes содержит имя класса, тип (bb для боевого (линейного) корабля или bc для боевого крейсера), 
+страну, в которой построен корабль, число главных орудий, калибр орудий (диаметр ствола орудия в дюймах) и водоизмещение 
+( вес в тоннах). В отношении Ships записаны название корабля, имя его класса и год спуска на воду. 
+В отношение Battles включены название и дата битвы, в которой участвовали корабли, 
+а в отношении Outcomes – результат участия данного корабля в битве (потоплен-sunk, поврежден - damaged или невредим - OK). 
+Замечания. 1) В отношение Outcomes могут входить корабли, отсутствующие в отношении Ships. 2) 
+Потопленный корабль в последующих битвах участия не принимает.
+
+Задание: 14 
+Найдите класс, имя и страну для кораблей из таблицы Ships, имеющих не менее 10 орудий.
+
+select c.class,name,country
+from classes c,ships s
+where c.class=s.class and numGuns>=10
+*******************************************************
+Задание: 15
+Найдите размеры жестких дисков, совпадающих у двух и более PC. Вывести: HD
+
+select hd
+from pc
+group by hd
+having count(model)>=2
+*******************************************************
+Задание: 16
+Найдите пары моделей PC, имеющих одинаковые скорость и RAM. 
+В результате каждая пара указывается только один раз, т.е. (i,j), но не (j,i), 
+Порядок вывода: модель с большим номером, модель с меньшим номером, скорость и RAM.
+
+
+SELECT DISTINCT p1.model, p2.model, p1.speed, p1.ram
+FROM pc p1, pc p2
+WHERE p1.speed = p2.speed AND p1.ram = p2.ram AND p1.model > p2.model
+*******************************************************
+Задание: 17
+Найдите модели ПК-блокнотов, скорость которых меньше скорости любого из ПК. 
+Вывести: type, model, speed
+
+Select distinct type, l.model, speed
+from product p,laptop l
+where type='laptop' and l.speed<(select min(speed) from pc)
+
+or
+
+Select distinct type,p.model, speed
+from product p 
+     inner join laptop l on 
+     p.model=l.model
+where type='laptop' and l.speed<(select min(speed) from pc)
+
+or
+
+Select distinct type,p.model, speed
+from product p, laptop l  
+where p.model=l.model 
+      and type='laptop' 
+      and l.speed<(select min(speed) from pc)
+*******************************************************
+Задание: 18
+Найдите производителей самых дешевых цветных принтеров. 
+Вывести: maker, price
+
+Select distinct maker,price
+from product p,Printer pr
+where p.model=pr.model
+and pr.color='y' and pr.price=(select min(price) from printer 
+where printer.color='y')
+*******************************************************
+Задание: 19
+Для каждого производителя, имеющего модели в таблице Laptop, найдите средний размер экрана выпускаемых им ПК-блокнотов. 
+Вывести: maker, средний размер экрана.
+
+SELECT p.maker, AVG(screen) as Avg_screen
+from product p, laptop l
+where p.model=l.model
+GROUP BY p.maker
+
+ or 
+
+SELECT product.maker, AVG(screen)
+FROM laptop
+LEFT JOIN product ON product.model = laptop.model
+GROUP BY product.maker
+*******************************************************
+Задание: 20
+Найдите производителей, выпускающих по меньшей мере три различных модели ПК. Вывести: Maker, число моделей ПК.
+
+SELECT maker,count(model)
+from product
+where type='pc'
+group by maker
+having count(model) >=3
+*******************************************************
+Задание: 21
+Найдите максимальную цену ПК, выпускаемых каждым производителем, у которого есть модели в таблице PC. 
+Вывести: maker, максимальная цена.
+
+SELECT product.maker, MAX(pc.price)
+FROM product, pc
+WHERE product.model = pc.model
+GROUP BY product.maker
+
+or
+
+Select maker, max(pc.price)
+from product,pc
+where product.model=pc.model and
+maker in(select maker from product where type='PC')
+group by maker
+*******************************************************
+Задание: 22
+Для каждого значения скорости ПК, превышающего 600 МГц, 
+определите среднюю цену ПК с такой же скоростью. Вывести: speed, средняя цена.
+
+SELECT speed, AVG(price) as Avg_price
+FROM pc
+WHERE speed > 600
+GROUP BY speed
+*******************************************************
+Задание: 23
+Найдите производителей, которые производили бы как ПК
+со скоростью не менее 750 МГц, так и ПК-блокноты со скоростью не менее 750 МГц.
+Вывести: Maker
+
+select maker 
+from(select maker, max(pc.speed) max_pc, max(l.speed) max_l
+from product p
+left join pc
+on pc.model = p.model
+left join laptop l
+on p.model = l.model
+group by maker)t1
+where max_pc>=750 and max_l>=750
+
+or
+
+select maker
+from product p
+left join pc
+on pc.model = p.model
+left join laptop l
+on p.model = l.model
+group by maker
+	HAVING ( max(pc.speed) >= 750 and max(l.speed) >= 750)
+
+or
+
+SELECT DISTINCT maker
+FROM product t1 JOIN pc t2 ON t1.model=t2.model
+WHERE speed>=750 AND maker IN
+( SELECT maker
+FROM product t1 JOIN laptop t2 ON t1.model=t2.model
+WHERE speed>=750)
+*******************************************************
+Задание: 24
+Перечислите номера моделей любых типов, имеющих самую высокую цену по всей имеющейся в базе данных продукции.
+
+select model
+from(select model,price from pc
+union
+select model,price from laptop
+union
+select model,price from printer)
+t1 where price=(select max(price) from (
+select price from pc
+union 
+select price from laptop
+union
+select price from printer)
+t2)
+*******************************************************
+Задание: 25
+Найдите производителей принтеров, которые производят ПК с наименьшим объемом RAM и 
+с самым быстрым процессором среди всех ПК, имеющих наименьший объем RAM. Вывести: Maker
+
+select distinct maker
+from product p
+join pc
+on pc.model = p.model
+WHERE ram = (SELECT MIN(ram)FROM pc)
+AND speed = (SELECT MAX(speed)FROM pc
+              WHERE ram = (SELECT MIN(ram)FROM pc))
+and maker in (select maker from product where type = 'Printer')
+
+or
+
+
+SELECT DISTINCT maker
+FROM product
+WHERE model IN (SELECT model
+                FROM pc
+                WHERE ram = (SELECT MIN(ram)
+                             FROM pc)
+                AND speed = (SELECT MAX(speed)
+                             FROM pc
+                             WHERE ram = (SELECT MIN(ram)
+                                          FROM pc)
+                             )
+                )
+AND
+maker IN (SELECT maker
+          FROM product
+          WHERE type='printer')
+
+or
+
+with tr as 
+(
+select min(ram) a1, max(speed) a2
+from pc
+where ram in (select  min(ram) from pc)
+)
+select distinct maker 
+from pc
+join tr
+on ram = a1
+and speed = a2
+join product p
+on p.model = pc.model
+where maker in (select maker from product where type='printer')
+**************************************************************************************************************
